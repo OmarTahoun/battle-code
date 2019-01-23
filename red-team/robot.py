@@ -1,7 +1,7 @@
 from battlecode import BCAbstractRobot, SPECS
 import battlecode as bc
 import random
-import nav
+# import nav
 
 __pragma__('iconv')
 __pragma__('tconv')
@@ -21,6 +21,62 @@ class MyRobot(BCAbstractRobot):
     adjacentdirs = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1],]
     spawnloc = None
     step = -1
+    #
+    def loc_in_list(self, elt, lst):
+        if len(lst) < 1:
+            return False
+        for e in lst:
+            if e[0] == elt[0] and e[1] == elt[1]:
+                return True
+        return False
+
+    def get_neighbors(self, grid):
+        x = self.me['x']
+        y = self.me['y']
+        rows = cols = len(grid)
+        neighbors = []
+
+        if x < rows-1:
+            neighbors.append([y,x+1])
+            if y > 0:
+                neighbors.append([y-1,x+1])
+            if y < cols-1:
+                neighbors.append([y+1,x+1])
+
+        if x > 0:
+            neighbors.append([y,x-1])
+            if y > 0:
+                neighbors.append([y-1,x-1])
+            if y < cols-1:
+                neighbors.append([y+1,x-1])
+
+        if y < cols-1:
+            neighbors.append([y+1,x])
+
+        if y > 0:
+            neighbors.append([y-1,x])
+        return neighbors
+
+    def find_best_neighbor(self, neighbors, grid, castle):
+        x = self.me['x']
+        y = self.me['y']
+        new_neighbors = []
+        best = None
+        shortest = 49**2 + 49**2
+        for neighbor in neighbors:
+            if grid[neighbor[0]][neighbor[1]] == True:
+                new_neighbors.append(neighbor)
+        for neighbor in new_neighbors:
+            dist = (castle[0] - neighbor[0])**2 + (castle[1] - neighbor[1])**2
+            if dist<shortest:
+                shortest = dist
+                best = neighbor
+        choice = (best[0] - y, best[1] - x)
+        return choice
+
+
+
+
 
     def turn(self):
         attackable = []
@@ -30,7 +86,7 @@ class MyRobot(BCAbstractRobot):
 
         self.step += 1
         self.log("START TURN " + self.step)
-        
+
         if self.me['unit'] == SPECS['CRUSADER']:
             self.log("Crusader health: " + str(self.me['health']))
 
@@ -48,6 +104,10 @@ class MyRobot(BCAbstractRobot):
                         # add it to the list
                         attackable.append(r)
 
+                    if r['unit'] == 0 and not self.loc_in_list([r['x'], r['y']], self.enemyCastles):
+                        self.log("enemy castle at " + str(r['x']) + str(r['y']))
+                        self.enemyCastles.append([r['x'], r['y']])
+
             if attackable:
                 # attack first robot
                 r = attackable[0]
@@ -55,7 +115,11 @@ class MyRobot(BCAbstractRobot):
                 return self.attack(r['x'] - self.me['x'], r['y'] - self.me['y'])
             else:
                 choices = [(0,-1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
-                choice = random.choice(choices)
+                if len(self.enemyCastles) > 0:
+                    around_me = self.get_neighbors(self.get_passable_map())
+                    choice = self.find_best_neighbor(around_me, self.get_passable_map(), self.enemyCastles[0])
+                else:
+                    choice = random.choice(choices)
                 self.log('TRYING TO MOVE IN DIRECTION ' + str(choice))
                 return self.move(*choice)
 
