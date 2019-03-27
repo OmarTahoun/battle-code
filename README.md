@@ -1,4 +1,4 @@
-# The code for my battle code competition
+# My code for the battle code competition
 
 #### Red team will be the team i play with and modify adn the blue team will be the dummy one with just random movement
 
